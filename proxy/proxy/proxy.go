@@ -385,6 +385,7 @@ func (p *Conn) createStreams(ctx context.Context, method string) (proxypb.Proxy_
 	if err != nil {
 		return nil, nil, errors, status.Errorf(codes.Internal, "can't setup proxy stream - %v", err)
 	}
+	log := logr.FromContextOrDiscard(ctx)
 
 	streamIds := make(map[uint64]*Ret)
 
@@ -411,6 +412,7 @@ func (p *Conn) createStreams(ctx context.Context, method string) (proxypb.Proxy_
 				req.GetStartStream().DialTimeout = durationpb.New(*p.timeouts[i])
 			}
 			err = stream.Send(req)
+			log.Error(err, "sent")
 
 			// If Send reports an error and is EOF we have to use Recv to get the actual error according to documentation
 			// for SendMsg. However it appears SendMsg will return actual errors "sometimes" when it's the first stream
@@ -506,7 +508,6 @@ func (p *Conn) createStreams(ctx context.Context, method string) (proxypb.Proxy_
 
 	wg.Wait()
 
-	log := logr.FromContextOrDiscard(ctx)
 	if sendErr != nil || recvErr != nil {
 		err := fmt.Errorf("Setting up streams errors: %v - %v", sendErr, recvErr)
 		log.Error(err, "Setup error")
